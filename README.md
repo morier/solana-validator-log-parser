@@ -11,6 +11,7 @@ CLI tool to parse Solana validator logs and produce operational summaries for tr
 - Return top repeated error fragments
 - Support text and JSON output modes
 - Include sample log for offline demo and CI smoke test
+- Support stdin input with `--file -` for streaming pipelines
 
 ## Requirements
 
@@ -21,6 +22,9 @@ CLI tool to parse Solana validator logs and produce operational summaries for tr
 ```bash
 python solana_log_parser.py --file samples/validator.log --output text
 python solana_log_parser.py --file samples/validator.log --output json
+
+# stream input via stdin
+Get-Content samples/validator.log | python solana_log_parser.py --file - --output json
 ```
 
 ## Example (JSON)
@@ -54,5 +58,4 @@ GitHub Actions runs:
 ## Roadmap
 
 - Add regex profile presets for different validator versions
-- Add stdin support for real-time streaming parse
 - Add optional severity thresholds with non-zero exit codes

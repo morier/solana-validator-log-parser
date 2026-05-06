@@ -1,4 +1,5 @@
 import unittest
+from io import StringIO
 
 import solana_log_parser as parser
 
@@ -36,6 +37,14 @@ class SolanaLogParserTests(unittest.TestCase):
         self.assertEqual(data["total_lines"], 4)
         self.assertEqual(data["error_rate_pct"], 25.0)
         self.assertEqual(data["warning_rate_pct"], 25.0)
+
+    def test_parse_log_stream(self):
+        stream = StringIO("INFO vote landed\nWARN retry\nERROR rpc failed\n")
+        summary = parser.parse_log_stream(stream)
+        self.assertEqual(summary.total_lines, 3)
+        self.assertEqual(summary.error_lines, 1)
+        self.assertEqual(summary.warning_lines, 1)
+        self.assertGreaterEqual(summary.signal_counts["votes"], 1)
 
 
 if __name__ == "__main__":

@@ -13,9 +13,11 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import sys
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
+from typing import IO
 from typing import Any
 
 ERROR_PATTERNS = [
@@ -62,24 +64,37 @@ def _extract_fragment(line: str) -> str:
     return stripped[:117] + "..."
 
 
+def _init_counters() -> tuple[int, int, Counter[str], dict[str, int]]:
+    return 0, 0, Counter(), {name: 0 for name in SIGNAL_PATTERNS}
+
+
+def _accumulate_line(
+    line: str,
+    errors: int,
+    warnings: int,
+    error_fragments: Counter[str],
+    signal_counts: dict[str, int],
+) -> tuple[int, int]:
+    if _matches_any(line, ERROR_PATTERNS):
+        errors += 1
+        error_fragments[_extract_fragment(line)] += 1
+
+    if _matches_any(line, WARNING_PATTERNS):
+        warnings += 1
+
+    for signal_name, patterns in SIGNAL_PATTERNS.items():
+        if _matches_any(line, patterns):
+            signal_counts[signal_name] += 1
+
+    return errors, warnings
+
+
 def parse_log_lines(lines: list[str]) -> ParseSummary:
     total = len(lines)
-    errors = 0
-    warnings = 0
-    error_fragments: Counter[str] = Counter()
-    signal_counts: dict[str, int] = {name: 0 for name in SIGNAL_PATTERNS}
+    errors, warnings, error_fragments, signal_counts = _init_counters()
 
     for line in lines:
-        if _matches_any(line, ERROR_PATTERNS):
-            errors += 1
-            error_fragments[_extract_fragment(line)] += 1
-
-        if _matches_any(line, WARNING_PATTERNS):
-            warnings += 1
-
-        for signal_name, patterns in SIGNAL_PATTERNS.items():
-            if _matches_any(line, patterns):
-                signal_counts[signal_name] += 1
+        errors, warnings = _accumulate_line(line, errors, warnings, error_fragments, signal_counts)
 
     top_error_fragments = error_fragments.most_common(5)
 
@@ -95,6 +110,25 @@ def parse_log_lines(lines: list[str]) -> ParseSummary:
 def parse_log_file(path: Path) -> ParseSummary:
     lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
     return parse_log_lines(lines)
+
+
+def parse_log_stream(stream: IO[str]) -> ParseSummary:
+    total = 0
+    errors, warnings, error_fragments, signal_counts = _init_counters()
+
+    for line in stream:
+        total += 1
+        errors, warnings = _accumulate_line(line, errors, warnings, error_fragments, signal_counts)
+
+    top_error_fragments = error_fragments.most_common(5)
+
+    return ParseSummary(
+        total_lines=total,
+        error_lines=errors,
+        warning_lines=warnings,
+        signal_counts=signal_counts,
+        top_error_fragments=top_error_fragments,
+    )
 
 
 def as_dict(summary: ParseSummary) -> dict[str, Any]:
@@ -144,12 +178,15 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    path = Path(args.file)
-    if not path.exists() or not path.is_file():
-        print(f"Log file not found: {path}")
-        return 2
+    if args.file == "-":
+        summary = parse_log_stream(sys.stdin)
+    else:
+        path = Path(args.file)
+        if not path.exists() or not path.is_file():
+            print(f"Log file not found: {path}")
+            return 2
+        summary = parse_log_file(path)
 
-    summary = parse_log_file(path)
     summary_data = as_dict(summary)
 
     if args.output == "json":
