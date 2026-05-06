@@ -1,0 +1,8 @@
+[2026-05-06T08:00:00Z INFO  solana_core::validator] validator initialized on slot 302100
+[2026-05-06T08:00:01Z INFO  rpc] getSlot request processed in 12ms
+[2026-05-06T08:00:02Z WARN  solana_core::replay_stage] slow replay detected, retry in progress
+[2026-05-06T08:00:03Z INFO  solana_vote_program] vote landed for slot 302101
+[2026-05-06T08:00:04Z ERROR solana_core::gossip_service] connection reset by peer while sending gossip packet
+[2026-05-06T08:00:05Z INFO  solana_core::cluster_info] gossip table updated for peer count 812
+[2026-05-06T08:00:06Z ERROR solana_core::rpc] rpc health check failed due to timeout
+[2026-05-06T08:00:07Z INFO  tower] vote lockout updated
